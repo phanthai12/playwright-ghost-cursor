@@ -9,14 +9,16 @@ like the definitely-not-robot you are.
 
 ## Installation
 
+Since this is a fork adapted for Playwright and not published to npm, you can install it directly from this GitHub repository.
+
 ```sh
-yarn add ghost-cursor
+yarn add https://github.com/phanthai12/playwright-ghost-cursor
 ```
 
-or with npm
+or with npm:
 
 ```sh
-npm install ghost-cursor
+npm install https://github.com/phanthai12/playwright-ghost-cursor
 ```
 
 ## Usage
