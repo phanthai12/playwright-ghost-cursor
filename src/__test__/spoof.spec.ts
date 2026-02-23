@@ -56,7 +56,7 @@ test.describe('Mouse movements', () => {
   })
 
   test('Should scroll to elements correctly', async ({ page }) => {
-    const getScrollPosition = async (): Promise<{ top: number, left: number }> => page.evaluate(() => (
+    const getScrollPosition = async (): Promise<{ top: number, left: number }> => await page.evaluate(() => (
       { top: window.scrollY, left: window.scrollX }
     ))
 
@@ -82,7 +82,7 @@ test.describe('Mouse movements', () => {
   })
 
   test('Should scroll to position correctly', async ({ page }) => {
-    const getScrollPosition = async (): Promise<{ top: number, left: number }> => page.evaluate(() => (
+    const getScrollPosition = async (): Promise<{ top: number, left: number }> => await page.evaluate(() => (
       { top: window.scrollY, left: window.scrollX }
     ))
 

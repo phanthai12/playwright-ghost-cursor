@@ -10,8 +10,8 @@ interface WindowWithMouseHelper extends Window {
  *
  * @returns `removeMouseHelper` function that removes the mouseHelper box and listeners.
  */
-export async function installMouseHelper(page: Page):
-  Promise<{ removeMouseHelper: () => Promise<void> }> {
+export async function installMouseHelper (page: Page):
+Promise<{ removeMouseHelper: () => Promise<void> }> {
   const initScript = async (): Promise<void> => {
     const attachListener = (): void => {
       const box = document.createElement('p-mouse-pointer')
@@ -89,7 +89,7 @@ export async function installMouseHelper(page: Page):
         box.classList.remove('p-mouse-pointer-hide')
       }
 
-      function updateButtons(buttons: number): void {
+      function updateButtons (buttons: number): void {
         for (let i = 0; i < 5; i++) {
           box.classList.toggle(`button-${i}`, Boolean(buttons & (1 << i)))
         }
@@ -101,15 +101,15 @@ export async function installMouseHelper(page: Page):
       document.addEventListener('mouseleave', onMouseLeave, true)
       document.addEventListener('mouseenter', onMouseEnter, true)
 
-        ; (window as WindowWithMouseHelper).removeMouseHelper = () => {
-          document.removeEventListener('mousemove', onMouseMove, true)
-          document.removeEventListener('mousedown', onMouseDown, true)
-          document.removeEventListener('mouseup', onMouseUp, true)
-          document.removeEventListener('mouseleave', onMouseLeave, true)
-          document.removeEventListener('mouseenter', onMouseEnter, true)
-          box.remove()
-          styleElement.remove()
-        }
+      ; (window as WindowWithMouseHelper).removeMouseHelper = () => {
+        document.removeEventListener('mousemove', onMouseMove, true)
+        document.removeEventListener('mousedown', onMouseDown, true)
+        document.removeEventListener('mouseup', onMouseUp, true)
+        document.removeEventListener('mouseleave', onMouseLeave, true)
+        document.removeEventListener('mouseenter', onMouseEnter, true)
+        box.remove()
+        styleElement.remove()
+      }
     }
 
     if (document.readyState !== 'loading') {
@@ -125,7 +125,7 @@ export async function installMouseHelper(page: Page):
   await page.addInitScript(initScript)
   await page.evaluate(initScript)
 
-  async function removeMouseHelper(): Promise<void> {
+  async function removeMouseHelper (): Promise<void> {
     await page.evaluate(() => {
       ; (window as WindowWithMouseHelper).removeMouseHelper?.()
     })
