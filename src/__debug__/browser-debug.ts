@@ -1,7 +1,7 @@
 import { type ClickOptions, GhostCursor } from '../spoof'
 import { join } from 'path'
 import { promises as fs } from 'fs'
-import puppeteer from 'puppeteer'
+import { chromium } from 'playwright'
 
 const delay = async (ms: number): Promise<void> => {
   if (ms < 1) return
@@ -19,8 +19,9 @@ const cursorDefaultOptions = {
   waitForSelector: 200
 } as const satisfies ClickOptions
 
-puppeteer.launch({ headless: false }).then(async (browser) => {
-  const page = await browser.newPage()
+chromium.launch({ headless: false }).then(async (browser) => {
+  const context = await browser.newContext()
+  const page = await context.newPage()
 
   const cursor = new GhostCursor(page, {
     visible: true,
@@ -36,7 +37,7 @@ puppeteer.launch({ headless: false }).then(async (browser) => {
   const html = await fs.readFile(join(__dirname, 'custom-page.html'), 'utf8')
 
   await page.goto('data:text/html,' + encodeURIComponent(html), {
-    waitUntil: 'networkidle2'
+    waitUntil: 'networkidle'
   })
 
   const performActions = async (): Promise<void> => {

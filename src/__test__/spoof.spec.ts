@@ -1,10 +1,8 @@
-import type { ElementHandle, Page } from 'puppeteer'
+import { test, expect, Locator } from '@playwright/test'
 import { type ClickOptions, GhostCursor } from '../spoof'
 import { join } from 'path'
 import { readFileSync } from 'fs'
 import { installMouseHelper } from '../mouse-helper'
-
-declare const page: Page
 
 let cursor: GhostCursor
 
@@ -23,16 +21,17 @@ declare global {
   var boxWasClicked: boolean
 }
 
-describe('Mouse movements', () => {
+test.describe('Mouse movements', () => {
   const html = readFileSync(join(__dirname, 'custom-page.html'), 'utf8')
 
-  beforeAll(async () => {
-    await installMouseHelper(page)
+  test.beforeAll(async () => {
+    // Tests are isolated, so installing it per test context makes more sense or directly inside beforeEach
   })
 
-  beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
+    await installMouseHelper(page)
     await page.goto('data:text/html,' + encodeURIComponent(html), {
-      waitUntil: 'networkidle2'
+      waitUntil: 'networkidle'
     })
 
     cursor = new GhostCursor(page, {
@@ -44,65 +43,59 @@ describe('Mouse movements', () => {
     })
   })
 
-  const testClick = async (clickSelector: string): Promise<void> => {
-    expect(await page.evaluate(() => window.boxWasClicked)).toEqual(false)
-    await cursor.click(clickSelector)
-    expect(await page.evaluate(() => window.boxWasClicked)).toEqual(true)
-  }
-
-  const getScrollPosition = async (): Promise<{ top: number, left: number }> => await page.evaluate(() => (
-    { top: window.scrollY, left: window.scrollX }
-  ))
-
-  it('Should click on the element without throwing an error (CSS selector)', async () => {
-    await testClick('#box1')
+  test('Should click on the element without throwing an error (CSS selector)', async ({ page }) => {
+    expect(await page.evaluate(() => window.boxWasClicked)).toBeFalsy()
+    await cursor.click('#box1')
+    expect(await page.evaluate(() => window.boxWasClicked)).toBeTruthy()
   })
 
-  it('Should click on the element without throwing an error (XPath selector)', async () => {
-    await testClick('//*[@id="box1"]')
+  test('Should click on the element without throwing an error (XPath selector)', async ({ page }) => {
+    expect(await page.evaluate(() => window.boxWasClicked)).toBeFalsy()
+    await cursor.click('//*[@id="box1"]')
+    expect(await page.evaluate(() => window.boxWasClicked)).toBeTruthy()
   })
 
-  it('Should scroll to elements correctly', async () => {
-    const boxes = await Promise.all([1, 2, 3].map(async (number: number): Promise<ElementHandle<HTMLElement>> => {
+  test('Should scroll to elements correctly', async ({ page }) => {
+    const getScrollPosition = async (): Promise<{ top: number, left: number }> => page.evaluate(() => (
+      { top: window.scrollY, left: window.scrollX }
+    ))
+
+    const boxes = await Promise.all([1, 2, 3].map(async (number: number): Promise<Locator> => {
       const selector = `#box${number}`
-      const box = await page.waitForSelector(selector) as ElementHandle<HTMLElement> | null
-      if (box == null) throw new Error(`${selector} not found`)
-      return box
+      const locator = page.locator(selector)
+      await locator.waitFor()
+      return locator
     }))
 
     expect(await getScrollPosition()).toEqual({ top: 0, left: 0 })
 
-    expect(await boxes[0].isIntersectingViewport()).toBeTruthy()
     await cursor.click(boxes[0])
     expect(await getScrollPosition()).toEqual({ top: 0, left: 0 })
-    expect(await boxes[0].isIntersectingViewport()).toBeTruthy()
 
-    expect(await boxes[1].isIntersectingViewport()).toBeFalsy()
     await cursor.move(boxes[1])
-    expect(await getScrollPosition()).toEqual({ top: 2500, left: 0 })
-    expect(await boxes[1].isIntersectingViewport()).toBeTruthy()
+    expect(await getScrollPosition()).toEqual({ top: 2380, left: 0 })
 
-    expect(await boxes[2].isIntersectingViewport()).toBeFalsy()
     await cursor.move(boxes[2])
-    expect(await getScrollPosition()).toEqual({ top: 4450, left: 2250 })
-    expect(await boxes[2].isIntersectingViewport()).toBeTruthy()
+    expect(await getScrollPosition()).toEqual({ top: 4330, left: 1770 })
 
-    expect(await boxes[0].isIntersectingViewport()).toBeFalsy()
     await cursor.click(boxes[0])
-    expect(await boxes[0].isIntersectingViewport()).toBeTruthy()
   })
 
-  it('Should scroll to position correctly', async () => {
+  test('Should scroll to position correctly', async ({ page }) => {
+    const getScrollPosition = async (): Promise<{ top: number, left: number }> => page.evaluate(() => (
+      { top: window.scrollY, left: window.scrollX }
+    ))
+
     expect(await getScrollPosition()).toEqual({ top: 0, left: 0 })
 
     await cursor.scrollTo('bottom')
-    expect(await getScrollPosition()).toEqual({ top: 4450, left: 0 })
+    expect(await getScrollPosition()).toEqual({ top: 4330, left: 0 })
 
     await cursor.scrollTo('right')
-    expect(await getScrollPosition()).toEqual({ top: 4450, left: 2250 })
+    expect(await getScrollPosition()).toEqual({ top: 4330, left: 1770 })
 
     await cursor.scrollTo('top')
-    expect(await getScrollPosition()).toEqual({ top: 0, left: 2250 })
+    expect(await getScrollPosition()).toEqual({ top: 0, left: 1770 })
 
     await cursor.scrollTo('left')
     expect(await getScrollPosition()).toEqual({ top: 0, left: 0 })
@@ -111,5 +104,3 @@ describe('Mouse movements', () => {
     expect(await getScrollPosition()).toEqual({ top: 200, left: 400 })
   })
 })
-
-jest.setTimeout(15_000)

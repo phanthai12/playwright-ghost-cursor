@@ -1,4 +1,4 @@
-import type { ElementHandle, Page, BoundingBox, CDPSession, Protocol } from 'puppeteer'
+import type { Locator, Page } from 'playwright'
 import debug from 'debug'
 import {
   type Vector,
@@ -121,7 +121,7 @@ export interface ClickOptions extends MoveOptions {
   /**
    * @default "left"
    */
-  readonly button?: Protocol.Input.MouseButton
+  readonly button?: 'left' | 'right' | 'middle'
   /**
    * @default 1
    */
@@ -160,8 +160,6 @@ export interface MoveToOptions extends PathOptions, Pick<MoveOptions, 'moveDelay
 }
 
 export type ScrollToDestination = Partial<Vector> | 'top' | 'bottom' | 'left' | 'right'
-
-export type MouseButtonOptions = Pick<ClickOptions, 'button' | 'clickCount'>
 
 /**
  * Default options for cursor functions.
@@ -241,77 +239,43 @@ const getRandomBoxPoint = (
 }
 
 /** The function signature to access the internal CDP client changed in puppeteer 14.4.1 */
-export const getCDPClient = (page: Page): CDPSession =>
-  typeof (page as any)._client === 'function'
-    ? (page as any)._client()
-    : (page as any)._client
+export interface BoundingBox { x: number, y: number, width: number, height: number }
+export interface MouseButtonOptions {
+  button?: 'left' | 'right' | 'middle'
+  clickCount?: number
+}
 
 /** Get a random point on a browser window */
 export const getRandomPagePoint = async (page: Page): Promise<Vector> => {
-  const targetId: string = (page.target() as any)._targetId
-  const window = await getCDPClient(page).send('Browser.getWindowForTarget', { targetId })
+  const window = page.viewportSize()
+  if (window == null) throw new Error('Viewport is not defined')
   return getRandomBoxPoint({
     x: origin.x,
     y: origin.y,
-    width: window.bounds.width ?? 0,
-    height: window.bounds.height ?? 0
+    width: window.width,
+    height: window.height
   })
 }
 
 /** Get correct position of Inline elements (elements like `<a>`). Has fallback. */
 export const getElementBox = async (
   page: Page,
-  element: ElementHandle,
+  element: Locator,
   relativeToMainFrame: boolean = true): Promise<BoundingBox> => {
   try {
-    const objectId = element.remoteObject().objectId
-    if (objectId === undefined) throw new Error('Element objectId is undefined, falling back to alternative methods')
-
-    const quads = await getCDPClient(page).send('DOM.getContentQuads', { objectId })
-    const elementBox: BoundingBox = {
-      x: quads.quads[0][0],
-      y: quads.quads[0][1],
-      width: quads.quads[0][4] - quads.quads[0][0],
-      height: quads.quads[0][5] - quads.quads[0][1]
-    }
-    if (!relativeToMainFrame) {
-      const elementFrame = await element.contentFrame()
-      const iframes = await elementFrame?.parentFrame()?.$$('xpath/.//iframe')
-      if (iframes !== undefined && iframes !== null) {
-        let frame: ElementHandle<Node> | undefined
-        for (const iframe of iframes) {
-          if ((await iframe.contentFrame()) === elementFrame) {
-            frame = iframe
-          }
-        }
-        if (frame !== undefined && frame != null) {
-          const frameBox = await frame.boundingBox()
-          if (frameBox !== null) {
-            elementBox.x -= frameBox.x
-            elementBox.y -= frameBox.y
-          }
-        }
-      }
-    }
-
-    return elementBox
+    const box = await element.boundingBox()
+    if (box == null) throw new Error('Could not find bounding box')
+    return box
   } catch {
-    try {
-      log('Quads not found, trying regular boundingBox')
-      const elementBox = await element.boundingBox()
-      if (elementBox === null) throw new Error('Element boundingBox is null, falling back to getBoundingClientRect')
-      return elementBox
-    } catch {
-      log('BoundingBox null, using getBoundingClientRect')
-      return await element.evaluate((el) =>
-        el.getBoundingClientRect() as BoundingBox
-      )
-    }
+    log('BoundingBox null, using evaluate')
+    return await element.evaluate((el: Element | SVGElement) =>
+      el.getBoundingClientRect() as BoundingBox
+    )
   }
 }
 
 /** Generates a set of points for mouse movement between two coordinates. */
-export function path (
+export function path(
   start: Vector,
   end: Vector | BoundingBox,
   /**
@@ -412,7 +376,7 @@ export class GhostCursor {
   private static readonly OVERSHOOT_SPREAD = 10
   private static readonly OVERSHOOT_RADIUS = 120
 
-  constructor (
+  constructor(
     page: Page,
     {
       start = origin,
@@ -420,29 +384,29 @@ export class GhostCursor {
       defaultOptions = {},
       visible = false
     }:
-    {
-      /**
-         * Cursor start position.
-         * @default { x: 0, y: 0 }
-         */
-      start?: Vector
-      /**
-         * Initially perform random movements.
-         * If `move`,`click`, etc. is performed, these random movements end.
-         * @default false
-         */
-      performRandomMoves?: boolean
-      /**
-         * Set custom default options for cursor action functions.
-         * Default values are described in the type JSdocs.
-         */
-      defaultOptions?: DefaultOptions
-      /**
-         * Whether cursor should be made visible using `installMouseHelper`.
-         * @default false
-         */
-      visible?: boolean
-    } = {}
+      {
+        /**
+             * Cursor start position.
+             * @default { x: 0, y: 0 }
+             */
+        start?: Vector
+        /**
+             * Initially perform random movements.
+             * If `move`,`click`, etc. is performed, these random movements end.
+             * @default false
+             */
+        performRandomMoves?: boolean
+        /**
+             * Set custom default options for cursor action functions.
+             * Default values are described in the type JSdocs.
+             */
+        defaultOptions?: DefaultOptions
+        /**
+             * Whether cursor should be made visible using `installMouseHelper`.
+             * @default false
+             */
+        visible?: boolean
+      } = {}
   ) {
     this.page = page
     this.location = start
@@ -468,7 +432,7 @@ export class GhostCursor {
   /**
    * Install mouse helper (visible cursor).
    */
-  public async installMouseHelper (): Promise<void> {
+  public async installMouseHelper(): Promise<void> {
     await installMouseHelper(this.page).then(
       ({ removeMouseHelper }) => {
         this.removeMouseHelperFn = removeMouseHelper
@@ -479,18 +443,17 @@ export class GhostCursor {
    * Make the cursor no longer visible.
    * Only has an effect if `visible=true` was passed, or this.installMouseHelper performed manually.
    */
-  public async removeMouseHelper (): Promise<void> {
+  public async removeMouseHelper(): Promise<void> {
     await this.removeMouseHelperFn?.()
     this.removeMouseHelperFn = undefined
   }
 
   /** Move the mouse to a point, getting the vectors via `path(previous, newLocation, options)`  */
-  private async moveMouse (
+  private async moveMouse(
     newLocation: BoundingBox | Vector,
     options?: PathOptions,
     abortOnMove: boolean = false
   ): Promise<void> {
-    const cdpClient = getCDPClient(this.page)
     const vectors = path(this.location, newLocation, options)
 
     for (const v of vectors) {
@@ -500,20 +463,13 @@ export class GhostCursor {
           return
         }
 
-        const dispatchParams: Protocol.Input.DispatchMouseEventRequest = {
-          type: 'mouseMoved',
-          x: v.x,
-          y: v.y
-        }
-
-        if ('timestamp' in v) dispatchParams.timestamp = v.timestamp
-
-        await cdpClient.send('Input.dispatchMouseEvent', dispatchParams)
+        const steps = 'timestamp' in v ? undefined : 1
+        await this.page.mouse.move(v.x, v.y, { steps })
 
         this.location = v
       } catch (error) {
         // Exit function if the browser is no longer connected
-        if (!this.page.browser().isConnected()) return
+        if (this.page.isClosed()) return
 
         log('Warning: could not move mouse, error message:', error)
       }
@@ -521,7 +477,7 @@ export class GhostCursor {
   }
 
   /** Start random mouse movements. Function recursively calls itself. */
-  private async randomMove (options?: RandomMoveOptions): Promise<void> {
+  private async randomMove(options?: RandomMoveOptions): Promise<void> {
     const optionsResolved = {
       moveDelay: 2000,
       randomizeMoveDelay: true,
@@ -544,8 +500,8 @@ export class GhostCursor {
     }
   }
 
-  private async mouseButtonAction (
-    action: Protocol.Input.DispatchMouseEventRequest['type'],
+  private async mouseButtonAction(
+    action: 'down' | 'up',
     options?: MouseButtonOptions
   ): Promise<void> {
     const optionsResolved = {
@@ -555,33 +511,30 @@ export class GhostCursor {
       ...options
     } satisfies MouseButtonOptions
 
-    const cdpClient = getCDPClient(this.page)
-    await cdpClient.send('Input.dispatchMouseEvent', {
-      x: this.location.x,
-      y: this.location.y,
-      button: optionsResolved.button,
-      clickCount: optionsResolved.clickCount,
-      type: action
-    })
+    if (action === 'down') {
+      await this.page.mouse.down({ button: optionsResolved.button, clickCount: optionsResolved.clickCount })
+    } else {
+      await this.page.mouse.up({ button: optionsResolved.button, clickCount: optionsResolved.clickCount })
+    }
   }
 
   /** Mouse button down */
-  public async mouseDown (options?: MouseButtonOptions): Promise<void> {
-    await this.mouseButtonAction('mousePressed', options)
+  public async mouseDown(options?: MouseButtonOptions): Promise<void> {
+    await this.mouseButtonAction('down', options)
   }
 
   /** Mouse button up (release) */
-  public async mouseUp (options?: MouseButtonOptions): Promise<void> {
-    await this.mouseButtonAction('mouseReleased', options)
+  public async mouseUp(options?: MouseButtonOptions): Promise<void> {
+    await this.mouseButtonAction('up', options)
   }
 
   /** Toggles random mouse movements on or off. */
-  public toggleRandomMove (random: boolean): void {
+  public toggleRandomMove(random: boolean): void {
     this.moving = !random
   }
 
   /** Get current location of the cursor. */
-  public getLocation (): Vector {
+  public getLocation(): Vector {
     return this.location
   }
 
@@ -589,8 +542,8 @@ export class GhostCursor {
    * Simulates a mouse click at the specified selector or element.
    * Default is to click at current location, don't move.
    */
-  public async click (
-    selector?: string | ElementHandle,
+  public async click(
+    selector?: string | Locator,
     /** @default defaultOptions.click */
     options?: ClickOptions
   ): Promise<void> {
@@ -632,8 +585,8 @@ export class GhostCursor {
   }
 
   /** Moves the mouse to the specified selector or element. */
-  public async move (
-    selector: string | ElementHandle,
+  public async move(
+    selector: string | Locator,
     /** @default defaultOptions.move */
     options?: MoveOptions
   ): Promise<void> {
@@ -698,7 +651,7 @@ export class GhostCursor {
   }
 
   /** Moves the mouse to the specified destination point. */
-  public async moveTo (
+  public async moveTo(
     destination: Vector,
     /** @default defaultOptions.moveTo */
     options?: MoveToOptions
@@ -719,13 +672,13 @@ export class GhostCursor {
   }
 
   /** Moves the mouse by a specified amount */
-  public async moveBy (delta: Partial<Vector>, options?: MoveToOptions): Promise<void> {
+  public async moveBy(delta: Partial<Vector>, options?: MoveToOptions): Promise<void> {
     await this.moveTo(add(this.location, { x: 0, y: 0, ...delta }), options)
   }
 
   /** Scrolls the element into view. If already in view, no scroll occurs. */
-  public async scrollIntoView (
-    selector: string | ElementHandle,
+  public async scrollIntoView(
+    selector: string | Locator,
     /** @default defaultOptions.scroll */
     options?: ScrollIntoViewOptions
   ): Promise<void> {
@@ -823,23 +776,15 @@ export class GhostCursor {
     }
 
     try {
-      const cdpClient = getCDPClient(this.page)
-
       if (scrollSpeed === 100 && optionsResolved.inViewportMargin <= 0) {
-        try {
-          const { objectId } = elem.remoteObject()
-          if (objectId === undefined) throw new Error()
-          await cdpClient.send('DOM.scrollIntoViewIfNeeded', { objectId })
-        } catch {
-          await manuallyScroll()
-        }
+        await elem.scrollIntoViewIfNeeded()
       } else {
         await manuallyScroll()
       }
     } catch (e) {
       // use regular JS scroll method as a fallback
       log('Falling back to JS scroll method', e)
-      await elem.evaluate((e) => e.scrollIntoView({
+      await elem.evaluate((e: Element | SVGElement) => e.scrollIntoView({
         block: 'center',
         behavior: scrollSpeed < 90 ? 'smooth' : undefined
       }))
@@ -847,7 +792,7 @@ export class GhostCursor {
   }
 
   /** Scrolls the page the distance set by `delta`. */
-  public async scroll (
+  public async scroll(
     delta: Partial<Vector>,
     /** @default defaultOptions.scroll */
     options?: ScrollOptions
@@ -860,8 +805,6 @@ export class GhostCursor {
     } satisfies ScrollOptions
 
     const scrollSpeed = clamp(optionsResolved.scrollSpeed, 1, 100)
-
-    const cdpClient = getCDPClient(this.page)
 
     let deltaX = delta.x ?? 0
     let deltaY = delta.y ?? 0
@@ -899,20 +842,14 @@ export class GhostCursor {
       deltaX = deltaX * xDirection
       deltaY = deltaY * yDirection
 
-      await cdpClient.send('Input.dispatchMouseEvent', {
-        type: 'mouseWheel',
-        deltaX,
-        deltaY,
-        x: this.location.x,
-        y: this.location.y
-      } satisfies Protocol.Input.DispatchMouseEventRequest)
+      await this.page.mouse.wheel(deltaX, deltaY)
     }
 
     await delay(optionsResolved.scrollDelay)
   }
 
   /** Scrolls to the specified destination point. */
-  public async scrollTo (
+  public async scrollTo(
     destination: ScrollToDestination,
     /** @default defaultOptions.scroll */
     options?: ScrollOptions
@@ -960,38 +897,27 @@ export class GhostCursor {
   }
 
   /** Gets the element via a selector. Can use an XPath. */
-  public async getElement (
-    selector: string | ElementHandle,
+  public async getElement(
+    selector: string | Locator,
     /** @default defaultOptions.getElement */
     options?: GetElementOptions
-  ): Promise<ElementHandle<Element>> {
+  ): Promise<Locator> {
     const optionsResolved = {
       ...this.defaultOptions?.getElement,
       ...options
     } satisfies GetElementOptions
 
-    let elem: ElementHandle<Element> | null = null
+    let elem: Locator | null = null
     if (typeof selector === 'string') {
       if (selector.startsWith('//') || selector.startsWith('(//')) {
-        selector = `xpath/.${selector}`
-        if (optionsResolved.waitForSelector !== undefined) {
-          await this.page.waitForSelector(selector, { timeout: optionsResolved.waitForSelector })
-        }
-        const [handle] = await this.page.$$(selector)
-        elem = handle.asElement() as ElementHandle<Element> | null
-      } else {
-        if (optionsResolved.waitForSelector !== undefined) {
-          await this.page.waitForSelector(selector, { timeout: optionsResolved.waitForSelector })
-        }
-        elem = await this.page.$(selector)
+        selector = `xpath=${selector}`
       }
-      if (elem === null) {
-        throw new Error(
-          `Could not find element with selector "${selector}", make sure you're waiting for the elements by specifying "waitForSelector"`
-        )
+      elem = this.page.locator(selector).first()
+      if (optionsResolved.waitForSelector !== undefined) {
+        await elem.waitFor({ timeout: optionsResolved.waitForSelector })
       }
     } else {
-      // ElementHandle
+      // Locator
       elem = selector
     }
     return elem

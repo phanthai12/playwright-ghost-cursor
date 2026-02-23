@@ -1,4 +1,4 @@
-import type { Page } from 'puppeteer'
+import type { Page } from 'playwright'
 
 interface WindowWithMouseHelper extends Window {
   removeMouseHelper?: () => void
@@ -10,9 +10,9 @@ interface WindowWithMouseHelper extends Window {
  *
  * @returns `removeMouseHelper` function that removes the mouseHelper box and listeners.
  */
-export async function installMouseHelper (page: Page):
-Promise<{ removeMouseHelper: () => Promise<void> }> {
-  const { identifier: evaluateOnNewDocumentId } = await page.evaluateOnNewDocument(() => {
+export async function installMouseHelper(page: Page):
+  Promise<{ removeMouseHelper: () => Promise<void> }> {
+  const initScript = async (): Promise<void> => {
     const attachListener = (): void => {
       const box = document.createElement('p-mouse-pointer')
       const styleElement = document.createElement('style')
@@ -89,7 +89,7 @@ Promise<{ removeMouseHelper: () => Promise<void> }> {
         box.classList.remove('p-mouse-pointer-hide')
       }
 
-      function updateButtons (buttons: number): void {
+      function updateButtons(buttons: number): void {
         for (let i = 0; i < 5; i++) {
           box.classList.toggle(`button-${i}`, Boolean(buttons & (1 << i)))
         }
@@ -101,15 +101,15 @@ Promise<{ removeMouseHelper: () => Promise<void> }> {
       document.addEventListener('mouseleave', onMouseLeave, true)
       document.addEventListener('mouseenter', onMouseEnter, true)
 
-      ;(window as WindowWithMouseHelper).removeMouseHelper = () => {
-        document.removeEventListener('mousemove', onMouseMove, true)
-        document.removeEventListener('mousedown', onMouseDown, true)
-        document.removeEventListener('mouseup', onMouseUp, true)
-        document.removeEventListener('mouseleave', onMouseLeave, true)
-        document.removeEventListener('mouseenter', onMouseEnter, true)
-        box.remove()
-        styleElement.remove()
-      }
+        ; (window as WindowWithMouseHelper).removeMouseHelper = () => {
+          document.removeEventListener('mousemove', onMouseMove, true)
+          document.removeEventListener('mousedown', onMouseDown, true)
+          document.removeEventListener('mouseup', onMouseUp, true)
+          document.removeEventListener('mouseleave', onMouseLeave, true)
+          document.removeEventListener('mouseenter', onMouseEnter, true)
+          box.remove()
+          styleElement.remove()
+        }
     }
 
     if (document.readyState !== 'loading') {
@@ -117,14 +117,18 @@ Promise<{ removeMouseHelper: () => Promise<void> }> {
     } else {
       window.addEventListener('DOMContentLoaded', attachListener, false)
     }
-  })
+  }
 
-  async function removeMouseHelper (): Promise<void> {
+  // addInitScript doesn't return an ID we can remove later in Playwright easily
+  // like evaluateOnNewDocument did. But it runs on the current page immediately
+  // and all subsequent evaluations.
+  await page.addInitScript(initScript)
+  await page.evaluate(initScript)
+
+  async function removeMouseHelper(): Promise<void> {
     await page.evaluate(() => {
-      ;(window as WindowWithMouseHelper).removeMouseHelper?.()
+      ; (window as WindowWithMouseHelper).removeMouseHelper?.()
     })
-
-    await page.removeScriptToEvaluateOnNewDocument(evaluateOnNewDocumentId)
   }
 
   /**
