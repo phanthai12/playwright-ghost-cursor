@@ -46,10 +46,16 @@ export const scale = (value: number, range1: [number, number], range2: [number, 
   (value - range1[0]) * (range2[1] - range2[0]) / (range1[1] - range1[0]) + range2[0]
 
 export const direction = (a: Vector, b: Vector): Vector => sub(b, a)
-export const perpendicular = (a: Vector): Vector => ({ x: a.y, y: -1 * a.x })
+export const perpendicular = (a: Vector): Vector => ({ x: a.y === 0 ? 0 : a.y, y: a.x === 0 ? 0 : -1 * a.x })
 export const magnitude = (a: Vector): number =>
   Math.sqrt(Math.pow(a.x, 2) + Math.pow(a.y, 2))
-export const unit = (a: Vector): Vector => div(a, magnitude(a))
+export const unit = (a: Vector): Vector => {
+  const mag = magnitude(a)
+  if (mag === 0) {
+    return { x: 0, y: 0 }
+  }
+  return div(a, mag)
+}
 export const setMagnitude = (a: Vector, amount: number): Vector =>
   mult(unit(a), amount)
 
