@@ -13,7 +13,8 @@ import {
   add,
   clamp,
   scale,
-  extrapolate
+  extrapolate,
+  isFiniteVector
 } from './math'
 import { installMouseHelper } from './mouse-helper'
 
@@ -21,6 +22,9 @@ import { installMouseHelper } from './mouse-helper'
 export { installMouseHelper }
 
 const log = debug('ghost-cursor')
+
+const MAX_PATH_STEPS = 10000
+const MAX_SCROLL_STEPS = 5000
 
 export interface BoxOptions {
   /**
@@ -292,7 +296,7 @@ export function path(
     ? (25 / optionsResolved.moveSpeed)
     : secureMathRandom()
   const baseTime = speed * MIN_STEPS
-  const steps = Math.ceil((Math.log2(fitts(length, width) + 1) + baseTime) * 3)
+  const steps = Math.min(MAX_PATH_STEPS, Math.ceil((Math.log2(fitts(length, width) + 1) + baseTime) * 3))
   const re = curve.getLUT(steps)
   return clampPositive(re, optionsResolved)
 }
@@ -307,20 +311,7 @@ const clampPositive = (vectors: Vector[], options?: PathOptions): Vector[] | Tim
 }
 
 const generateTimestamps = (vectors: Vector[], options?: PathOptions): TimedVector[] => {
-  const speed = options?.moveSpeed ?? (secureMathRandom() * 0.5 + 0.5)
-  const timeToMove = (P0: Vector, P1: Vector, P2: Vector, P3: Vector): number => {
-    let total = 0
-    const SAMPLES = 10
-    const dt = 1 / SAMPLES
-
-    for (let t = 0; t < 1; t += dt) {
-      const v1 = bezierCurveSpeed(t, P0, P1, P2, P3)
-      const v2 = bezierCurveSpeed(Math.min(t + dt, 1), P0, P1, P2, P3)
-      total += (v1 + v2) * dt / 2
-    }
-
-    return Math.round(total / speed)
-  }
+  const speed = Math.max(0.001, options?.moveSpeed ?? (secureMathRandom() * 0.5 + 0.5))
 
   const timedVectors: TimedVector[] = []
 
@@ -330,9 +321,9 @@ const generateTimestamps = (vectors: Vector[], options?: PathOptions): TimedVect
     } else {
       const P0 = vectors[i - 1]
       const P1 = vectors[i]
-      const P2 = i + 1 < vectors.length ? vectors[i + 1] : extrapolate(P0, P1)
-      const P3 = i + 2 < vectors.length ? vectors[i + 2] : extrapolate(P1, P2)
-      const time = timeToMove(P0, P1, P2, P3)
+      // Use distance between path points instead of integrating the whole curve for each segment
+      const distance = magnitude(direction(P0, P1))
+      const time = Math.round(distance / speed)
 
       timedVectors.push({
         ...vectors[i],
@@ -456,6 +447,11 @@ export class GhostCursor {
         // In case this is called from random mouse movements and the users wants to move the mouse, abort
         if (abortOnMove && this.moving) {
           return
+        }
+
+        if (!isFiniteVector(v)) {
+          log('Warning: non-finite coordinates, skipping point', v)
+          continue
         }
 
         const steps = 'timestamp' in v ? undefined : 1
@@ -698,23 +694,23 @@ export class GhostCursor {
       scrollPositionLeft
     } = await this.page.evaluate(() => (
       {
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+        viewportWidth: window.innerWidth || document.documentElement.clientWidth || document.body?.clientWidth || 0,
+        viewportHeight: window.innerHeight || document.documentElement.clientHeight || document.body?.clientHeight || 0,
         docHeight: Math.max(
-          document.documentElement.scrollHeight,
-          document.body.scrollHeight,
-          document.documentElement.offsetHeight,
-          document.body.offsetHeight,
-          document.documentElement.clientHeight,
-          document.body.clientHeight
+          document.body?.scrollHeight || 0,
+          document.documentElement.scrollHeight || 0,
+          document.body?.offsetHeight || 0,
+          document.documentElement.offsetHeight || 0,
+          document.body?.clientHeight || 0,
+          document.documentElement.clientHeight || 0
         ),
         docWidth: Math.max(
-          document.documentElement.scrollWidth,
-          document.body.scrollWidth,
-          document.documentElement.offsetWidth,
-          document.body.offsetWidth,
-          document.documentElement.clientWidth,
-          document.body.clientWidth
+          document.body?.scrollWidth || 0,
+          document.documentElement.scrollWidth || 0,
+          document.body?.offsetWidth || 0,
+          document.documentElement.offsetWidth || 0,
+          document.body?.clientWidth || 0,
+          document.documentElement.clientWidth || 0
         ),
         scrollPositionTop: window.scrollY,
         scrollPositionLeft: window.scrollX
@@ -838,10 +834,10 @@ export class GhostCursor {
       ? scrollSpeed
       : scale(scrollSpeed, [EXP_SCALE_START, 100], [EXP_SCALE_START, largerDistance])
 
-    const numSteps = Math.floor(largerDistance / largerDistanceScrollStep)
-    const largerDistanceRemainder = largerDistance % largerDistanceScrollStep
-    const shorterDistanceScrollStep = Math.floor(shorterDistance / numSteps)
-    const shorterDistanceRemainder = shorterDistance % numSteps
+    const numSteps = Math.min(MAX_SCROLL_STEPS, Math.floor(largerDistance / largerDistanceScrollStep))
+    const largerDistanceRemainder = largerDistance % (largerDistanceScrollStep || 1)
+    const shorterDistanceScrollStep = numSteps > 0 ? Math.floor(shorterDistance / numSteps) : 0
+    const shorterDistanceRemainder = numSteps > 0 ? shorterDistance % numSteps : 0
 
     for (let i = 0; i < numSteps; i++) {
       let longerDistanceDelta = largerDistanceScrollStep
@@ -856,7 +852,9 @@ export class GhostCursor {
       deltaX = deltaX * xDirection
       deltaY = deltaY * yDirection
 
-      await this.page.mouse.wheel(deltaX, deltaY)
+      if (Number.isFinite(deltaX) && Number.isFinite(deltaY)) {
+        await this.page.mouse.wheel(deltaX, deltaY)
+      }
     }
 
     await delay(optionsResolved.scrollDelay)
