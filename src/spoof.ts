@@ -276,7 +276,7 @@ export const getElementBox = async (
 }
 
 /** Generates a set of points for mouse movement between two coordinates. */
-export function path (
+export function path(
   start: Vector,
   end: Vector | BoundingBox,
   /**
@@ -311,13 +311,14 @@ const clampPositive = (vectors: Vector[], options?: PathOptions): Vector[] | Tim
 
 const generateTimestamps = (vectors: Vector[], options?: PathOptions): TimedVector[] => {
   const speed = options?.moveSpeed ?? (secureMathRandom() * 0.5 + 0.5)
-  const timeToMove = (P0: Vector, P1: Vector, P2: Vector, P3: Vector, samples: number): number => {
+  const timeToMove = (P0: Vector, P1: Vector, P2: Vector, P3: Vector): number => {
     let total = 0
-    const dt = 1 / samples
+    const SAMPLES = 10
+    const dt = 1 / SAMPLES
 
     for (let t = 0; t < 1; t += dt) {
-      const v1 = bezierCurveSpeed(t * dt, P0, P1, P2, P3)
-      const v2 = bezierCurveSpeed(t, P0, P1, P2, P3)
+      const v1 = bezierCurveSpeed(t, P0, P1, P2, P3)
+      const v2 = bezierCurveSpeed(Math.min(t + dt, 1), P0, P1, P2, P3)
       total += (v1 + v2) * dt / 2
     }
 
@@ -334,7 +335,7 @@ const generateTimestamps = (vectors: Vector[], options?: PathOptions): TimedVect
       const P1 = vectors[i]
       const P2 = i + 1 < vectors.length ? vectors[i + 1] : extrapolate(P0, P1)
       const P3 = i + 2 < vectors.length ? vectors[i + 2] : extrapolate(P1, P2)
-      const time = timeToMove(P0, P1, P2, P3, vectors.length)
+      const time = timeToMove(P0, P1, P2, P3)
 
       timedVectors.push({
         ...vectors[i],
@@ -373,7 +374,7 @@ export class GhostCursor {
   private static readonly OVERSHOOT_SPREAD = 10
   private static readonly OVERSHOOT_RADIUS = 120
 
-  constructor (
+  constructor(
     page: Page,
     {
       start = origin,
@@ -381,29 +382,29 @@ export class GhostCursor {
       defaultOptions = {},
       visible = false
     }:
-    {
-      /**
-             * Cursor start position.
-             * @default { x: 0, y: 0 }
-             */
-      start?: Vector
-      /**
-             * Initially perform random movements.
-             * If `move`,`click`, etc. is performed, these random movements end.
-             * @default false
-             */
-      performRandomMoves?: boolean
-      /**
-             * Set custom default options for cursor action functions.
-             * Default values are described in the type JSdocs.
-             */
-      defaultOptions?: DefaultOptions
-      /**
-             * Whether cursor should be made visible using `installMouseHelper`.
-             * @default false
-             */
-      visible?: boolean
-    } = {}
+      {
+        /**
+               * Cursor start position.
+               * @default { x: 0, y: 0 }
+               */
+        start?: Vector
+        /**
+               * Initially perform random movements.
+               * If `move`,`click`, etc. is performed, these random movements end.
+               * @default false
+               */
+        performRandomMoves?: boolean
+        /**
+               * Set custom default options for cursor action functions.
+               * Default values are described in the type JSdocs.
+               */
+        defaultOptions?: DefaultOptions
+        /**
+               * Whether cursor should be made visible using `installMouseHelper`.
+               * @default false
+               */
+        visible?: boolean
+      } = {}
   ) {
     this.page = page
     this.location = start
@@ -429,7 +430,7 @@ export class GhostCursor {
   /**
    * Install mouse helper (visible cursor).
    */
-  public async installMouseHelper (): Promise<void> {
+  public async installMouseHelper(): Promise<void> {
     await installMouseHelper(this.page).then(
       ({ removeMouseHelper }) => {
         this.removeMouseHelperFn = removeMouseHelper
@@ -440,13 +441,13 @@ export class GhostCursor {
    * Make the cursor no longer visible.
    * Only has an effect if `visible=true` was passed, or this.installMouseHelper performed manually.
    */
-  public async removeMouseHelper (): Promise<void> {
+  public async removeMouseHelper(): Promise<void> {
     await this.removeMouseHelperFn?.()
     this.removeMouseHelperFn = undefined
   }
 
   /** Move the mouse to a point, getting the vectors via `path(previous, newLocation, options)`  */
-  private async moveMouse (
+  private async moveMouse(
     newLocation: BoundingBox | Vector,
     options?: PathOptions,
     abortOnMove: boolean = false
@@ -474,7 +475,7 @@ export class GhostCursor {
   }
 
   /** Start random mouse movements. Function recursively calls itself. */
-  private async randomMove (options?: RandomMoveOptions): Promise<void> {
+  private async randomMove(options?: RandomMoveOptions): Promise<void> {
     const optionsResolved = {
       moveDelay: 2000,
       randomizeMoveDelay: true,
@@ -497,7 +498,7 @@ export class GhostCursor {
     }
   }
 
-  private async mouseButtonAction (
+  private async mouseButtonAction(
     action: 'down' | 'up',
     options?: MouseButtonOptions
   ): Promise<void> {
@@ -516,22 +517,22 @@ export class GhostCursor {
   }
 
   /** Mouse button down */
-  public async mouseDown (options?: MouseButtonOptions): Promise<void> {
+  public async mouseDown(options?: MouseButtonOptions): Promise<void> {
     await this.mouseButtonAction('down', options)
   }
 
   /** Mouse button up (release) */
-  public async mouseUp (options?: MouseButtonOptions): Promise<void> {
+  public async mouseUp(options?: MouseButtonOptions): Promise<void> {
     await this.mouseButtonAction('up', options)
   }
 
   /** Toggles random mouse movements on or off. */
-  public toggleRandomMove (random: boolean): void {
+  public toggleRandomMove(random: boolean): void {
     this.moving = !random
   }
 
   /** Get current location of the cursor. */
-  public getLocation (): Vector {
+  public getLocation(): Vector {
     return this.location
   }
 
@@ -539,7 +540,7 @@ export class GhostCursor {
    * Simulates a mouse click at the specified selector or element.
    * Default is to click at current location, don't move.
    */
-  public async click (
+  public async click(
     selector?: string | Locator,
     /** @default defaultOptions.click */
     options?: ClickOptions
@@ -582,7 +583,7 @@ export class GhostCursor {
   }
 
   /** Moves the mouse to the specified selector or element. */
-  public async move (
+  public async move(
     selector: string | Locator,
     /** @default defaultOptions.move */
     options?: MoveOptions
@@ -648,7 +649,7 @@ export class GhostCursor {
   }
 
   /** Moves the mouse to the specified destination point. */
-  public async moveTo (
+  public async moveTo(
     destination: Vector,
     /** @default defaultOptions.moveTo */
     options?: MoveToOptions
@@ -669,12 +670,12 @@ export class GhostCursor {
   }
 
   /** Moves the mouse by a specified amount */
-  public async moveBy (delta: Partial<Vector>, options?: MoveToOptions): Promise<void> {
+  public async moveBy(delta: Partial<Vector>, options?: MoveToOptions): Promise<void> {
     await this.moveTo(add(this.location, { x: 0, y: 0, ...delta }), options)
   }
 
   /** Scrolls the element into view. If already in view, no scroll occurs. */
-  public async scrollIntoView (
+  public async scrollIntoView(
     selector: string | Locator,
     /** @default defaultOptions.scroll */
     options?: ScrollIntoViewOptions
@@ -789,7 +790,7 @@ export class GhostCursor {
   }
 
   /** Scrolls the page the distance set by `delta`. */
-  public async scroll (
+  public async scroll(
     delta: Partial<Vector>,
     /** @default defaultOptions.scroll */
     options?: ScrollOptions
@@ -846,7 +847,7 @@ export class GhostCursor {
   }
 
   /** Scrolls to the specified destination point. */
-  public async scrollTo (
+  public async scrollTo(
     destination: ScrollToDestination,
     /** @default defaultOptions.scroll */
     options?: ScrollOptions
@@ -894,7 +895,7 @@ export class GhostCursor {
   }
 
   /** Gets the element via a selector. Can use an XPath. */
-  public async getElement (
+  public async getElement(
     selector: string | Locator,
     /** @default defaultOptions.getElement */
     options?: GetElementOptions
