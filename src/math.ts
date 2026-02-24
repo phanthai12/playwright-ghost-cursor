@@ -85,9 +85,9 @@ export const generateBezierAnchors = (
   }
   const anchors = [calc(), calc()]
   if (a.x < b.x) {
-    anchors.sort((a, b) => a.x - b.x)
+    anchors.sort((m, n) => m.x - n.x)
   } else {
-    anchors.sort((a, b) => b.x - a.x)
+    anchors.sort((m, n) => n.x - m.x)
   }
   return anchors as [Vector, Vector]
 }
