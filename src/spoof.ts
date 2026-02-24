@@ -286,6 +286,10 @@ export function path(
   options?: PathOptions): Vector[] | TimedVector[] {
   const optionsResolved: PathOptions = { ...options }
 
+  if (start.x === end.x && start.y === end.y) {
+    return clampPositive([start], optionsResolved)
+  }
+
   const DEFAULT_WIDTH = 100
   const MIN_STEPS = 25
   const width = 'width' in end && end.width !== 0 ? end.width : DEFAULT_WIDTH

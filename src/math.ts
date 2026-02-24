@@ -49,7 +49,13 @@ export const direction = (a: Vector, b: Vector): Vector => sub(b, a)
 export const perpendicular = (a: Vector): Vector => ({ x: a.y || 0, y: -a.x || 0 })
 export const magnitude = (a: Vector): number =>
   Math.sqrt(Math.pow(a.x, 2) + Math.pow(a.y, 2))
-export const unit = (a: Vector): Vector => div(a, magnitude(a))
+export const unit = (a: Vector): Vector => {
+  const mag = magnitude(a)
+  if (mag === 0) {
+    return { x: 0, y: 0 }
+  }
+  return div(a, mag)
+}
 export const setMagnitude = (a: Vector, amount: number): Vector =>
   mult(unit(a), amount)
 
