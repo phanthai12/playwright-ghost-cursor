@@ -210,10 +210,7 @@ const delay = async (ms: number): Promise<void> => {
  * https://en.wikipedia.org/wiki/Fitts%27s_law
  */
 const fitts = (distance: number, width: number): number => {
-  const a = 0
-  const b = 2
-  const id = Math.log2(distance / width + 1)
-  return a + b * id
+  return 2 * Math.log2(distance / width + 1)
 }
 
 /** Get a random point on a box */
