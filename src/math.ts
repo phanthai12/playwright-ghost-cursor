@@ -46,10 +46,16 @@ export const scale = (value: number, range1: [number, number], range2: [number, 
   (value - range1[0]) * (range2[1] - range2[0]) / (range1[1] - range1[0]) + range2[0]
 
 export const direction = (a: Vector, b: Vector): Vector => sub(b, a)
-export const perpendicular = (a: Vector): Vector => ({ x: a.y, y: (a.x === 0) ? 0 : -1 * a.x })
+export const perpendicular = (a: Vector): Vector => ({ x: a.y === 0 ? 0 : a.y, y: a.x === 0 ? 0 : -1 * a.x })
 export const magnitude = (a: Vector): number =>
   Math.sqrt(Math.pow(a.x, 2) + Math.pow(a.y, 2))
-export const unit = (a: Vector): Vector => div(a, magnitude(a))
+export const unit = (a: Vector): Vector => {
+  const mag = magnitude(a)
+  if (mag === 0) {
+    return { x: 0, y: 0 }
+  }
+  return div(a, mag)
+}
 export const setMagnitude = (a: Vector, amount: number): Vector =>
   mult(unit(a), amount)
 
@@ -83,7 +89,13 @@ export const generateBezierAnchors = (
     const choice = mult(normalV, side)
     return randomVectorOnLine(randMid, add(randMid, choice))
   }
-  return [calc(), calc()].sort((a, b) => a.x - b.x) as [Vector, Vector]
+  const anchors = [calc(), calc()]
+  if (a.x < b.x) {
+    anchors.sort((m, n) => m.x - n.x)
+  } else {
+    anchors.sort((m, n) => n.x - m.x)
+  }
+  return anchors as [Vector, Vector]
 }
 
 export const clamp = (target: number, min: number, max: number): number =>
@@ -125,3 +137,6 @@ export const bezierCurveSpeed = (
   const B2 = 3 * (1 - t) ** 2 * (P1.y - P0.y) + 6 * (1 - t) * t * (P2.y - P1.y) + 3 * t ** 2 * (P3.y - P2.y)
   return Math.sqrt(B1 ** 2 + B2 ** 2)
 }
+
+export const isFiniteVector = (a: Vector): boolean =>
+  Number.isFinite(a.x) && Number.isFinite(a.y)
