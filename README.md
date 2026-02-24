@@ -219,13 +219,13 @@ Installs a mouse helper on the page, making the pointer visible. Gets executed i
 
 Gets a random point on the browser window.
 
-#### `path(start: Vector, end: Vector | BoundingBox, options?: number | PathOptions): Vector[] | TimedVector[]`
+#### `path(start: Vector, end: Vector | BoundingBox, options?: PathOptions): Vector[] | TimedVector[]`
 
 Generates a set of points for mouse movement between two coordinates.
 
 - **start:** Starting point of the movement.
 - **end:** Ending point (or bounding box) of the movement.
-- **options (optional):** Additional options for generating the path. Can also be a number which will set `spreadOverride`.
+- **options (optional):** Additional options for generating the path.
     - `spreadOverride (number):` Override the spread of the generated path.
     - `moveSpeed (number):` Speed of mouse movement. Default is random.
     - `useTimestamps (boolean):` Generate timestamps for each point based on the trapezoidal rule.
