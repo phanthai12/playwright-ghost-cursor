@@ -280,13 +280,9 @@ export function path (
   end: Vector | BoundingBox,
   /**
    * Additional options for generating the path.
-   * Can also be a number which will set `spreadOverride`.
    */
-  // TODO: remove number arg in next major version change, fine to just allow `spreadOverride` in object.
-  options?: number | PathOptions): Vector[] | TimedVector[] {
-  const optionsResolved: PathOptions = typeof options === 'number'
-    ? { spreadOverride: options }
-    : { ...options }
+  options?: PathOptions): Vector[] | TimedVector[] {
+  const optionsResolved: PathOptions = { ...options }
 
   const DEFAULT_WIDTH = 100
   const MIN_STEPS = 25
