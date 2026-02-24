@@ -698,10 +698,24 @@ export class GhostCursor {
       scrollPositionLeft
     } = await this.page.evaluate(() => (
       {
-        viewportWidth: document.body.clientWidth,
-        viewportHeight: document.body.clientHeight,
-        docHeight: document.body.scrollHeight,
-        docWidth: document.body.scrollWidth,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        docHeight: Math.max(
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight,
+          document.documentElement.offsetHeight,
+          document.body.offsetHeight,
+          document.documentElement.clientHeight,
+          document.body.clientHeight
+        ),
+        docWidth: Math.max(
+          document.documentElement.scrollWidth,
+          document.body.scrollWidth,
+          document.documentElement.offsetWidth,
+          document.body.offsetWidth,
+          document.documentElement.clientWidth,
+          document.body.clientWidth
+        ),
         scrollPositionTop: window.scrollY,
         scrollPositionLeft: window.scrollX
       }
@@ -771,14 +785,19 @@ export class GhostCursor {
     }
 
     try {
-      if (scrollSpeed === 100 && optionsResolved.inViewportMargin <= 0) {
+      const box = await elem.boundingBox()
+      if (box !== null && scrollSpeed === 100 && optionsResolved.inViewportMargin <= 0) {
         await elem.scrollIntoViewIfNeeded()
       } else {
         await manuallyScroll()
       }
-    } catch (e) {
+    } catch (e: any) {
       // use regular JS scroll method as a fallback
-      log('Falling back to JS scroll method', e)
+      if (e.message?.includes('Node does not have a layout object')) {
+        log('Node does not have a layout object, falling back to JS scroll method')
+      } else {
+        log('Falling back to JS scroll method', e)
+      }
       await elem.evaluate((e: Element | SVGElement) => e.scrollIntoView({
         block: 'center',
         behavior: scrollSpeed < 90 ? 'smooth' : undefined
