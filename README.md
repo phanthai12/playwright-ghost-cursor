@@ -26,7 +26,7 @@ npm install https://github.com/phanthai12/playwright-ghost-cursor
 Generating movement data between 2 coordinates.
 
 ```js
-import { path } from "ghost-cursor";
+import { path } from "playwright-ghost-cursor";
 
 const from = { x: 100, y: 100 };
 const to = { x: 600, y: 700 };
@@ -48,7 +48,7 @@ const route = path(from, to);
 Generating movement data between 2 coordinates with timestamps.
 
 ```js
-import { path } from "ghost-cursor";
+import { path } from "playwright-ghost-cursor";
 
 const from = { x: 100, y: 100 };
 const to = { x: 600, y: 700 };
@@ -70,7 +70,7 @@ const route = path(from, to, { useTimestamps: true });
 Usage with playwright:
 
 ```js
-import { GhostCursor } from "ghost-cursor";
+import { GhostCursor } from "playwright-ghost-cursor";
 import { chromium } from "playwright";
 
 const run = async (url) => {
@@ -252,7 +252,7 @@ between the mouse and the object.
 
 ## To turn on logging, please set your DEBUG env variable like so:
 
-- OSX: `DEBUG="ghost-cursor:*"`
-- Linux: `DEBUG="ghost-cursor:*"`
-- Windows CMD: `set DEBUG=ghost-cursor:*`
-- Windows PowerShell: `$env:DEBUG = "ghost-cursor:*"`
+- OSX: `DEBUG="playwright-ghost-cursor:*"`
+- Linux: `DEBUG="playwright-ghost-cursor:*"`
+- Windows CMD: `set DEBUG=playwright-ghost-cursor:*`
+- Windows PowerShell: `$env:DEBUG = "playwright-ghost-cursor:*"`

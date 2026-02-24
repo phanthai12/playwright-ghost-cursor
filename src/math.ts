@@ -1,4 +1,5 @@
 import { Bezier } from 'bezier-js'
+import * as nodeCrypto from 'crypto'
 
 /**
  * Returns a cryptographically secure random number between 0 (inclusive) and 1 (exclusive).
@@ -16,7 +17,6 @@ export const secureMathRandom = (): number => {
     return array[0] / 0x100000000
   }
   try {
-    const nodeCrypto = require('crypto')
     if (nodeCrypto?.randomBytes !== undefined) {
       return nodeCrypto.randomBytes(4).readUInt32BE(0) / 0x100000000
     }

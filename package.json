@@ -1,7 +1,7 @@
 {
-  "name": "ghost-cursor",
+  "name": "playwright-ghost-cursor",
   "version": "1.4.2",
-  "description": "Move your mouse like a human in puppeteer or generate realistic movements on any 2D plane",
+  "description": "Move your mouse like a human in Playwright or generate realistic movements on any 2D plane",
   "repository": "https://github.com/Xetera/ghost-cursor",
   "main": "lib/spoof.js",
   "types": "lib/spoof.d.ts",
