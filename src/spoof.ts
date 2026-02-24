@@ -9,6 +9,7 @@ import {
   magnitude,
   origin,
   overshoot,
+  secureMathRandom,
   add,
   clamp,
   scale,
@@ -233,8 +234,8 @@ const getRandomBoxPoint = (
   }
 
   return {
-    x: x + paddingWidth / 2 + Math.random() * (width - paddingWidth),
-    y: y + paddingHeight / 2 + Math.random() * (height - paddingHeight)
+    x: x + paddingWidth / 2 + secureMathRandom() * (width - paddingWidth),
+    y: y + paddingHeight / 2 + secureMathRandom() * (height - paddingHeight)
   }
 }
 
@@ -296,7 +297,7 @@ export function path (
 
   const speed = optionsResolved.moveSpeed !== undefined && optionsResolved.moveSpeed > 0
     ? (25 / optionsResolved.moveSpeed)
-    : Math.random()
+    : secureMathRandom()
   const baseTime = speed * MIN_STEPS
   const steps = Math.ceil((Math.log2(fitts(length, width) + 1) + baseTime) * 3)
   const re = curve.getLUT(steps)
@@ -313,7 +314,7 @@ const clampPositive = (vectors: Vector[], options?: PathOptions): Vector[] | Tim
 }
 
 const generateTimestamps = (vectors: Vector[], options?: PathOptions): TimedVector[] => {
-  const speed = options?.moveSpeed ?? (Math.random() * 0.5 + 0.5)
+  const speed = options?.moveSpeed ?? (secureMathRandom() * 0.5 + 0.5)
   const timeToMove = (P0: Vector, P1: Vector, P2: Vector, P3: Vector, samples: number): number => {
     let total = 0
     const dt = 1 / samples
@@ -490,7 +491,7 @@ export class GhostCursor {
         const rand = await getRandomPagePoint(this.page)
         await this.moveMouse(rand, optionsResolved, true)
       }
-      await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? Math.random() : 1))
+      await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? secureMathRandom() : 1))
       this.randomMove(options).then(
         (_) => { },
         (_) => { }
@@ -579,7 +580,7 @@ export class GhostCursor {
       log('Warning: could not click mouse, error message:', error)
     }
 
-    await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? Math.random() : 1))
+    await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? secureMathRandom() : 1))
 
     this.toggleRandomMove(wasRandom)
   }
@@ -647,7 +648,7 @@ export class GhostCursor {
 
     this.toggleRandomMove(wasRandom)
 
-    await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? Math.random() : 1))
+    await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? secureMathRandom() : 1))
   }
 
   /** Moves the mouse to the specified destination point. */
@@ -668,7 +669,7 @@ export class GhostCursor {
     await this.moveMouse(destination, optionsResolved)
     this.toggleRandomMove(wasRandom)
 
-    await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? Math.random() : 1))
+    await delay(optionsResolved.moveDelay * (optionsResolved.randomizeMoveDelay ? secureMathRandom() : 1))
   }
 
   /** Moves the mouse by a specified amount */
