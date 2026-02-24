@@ -13,7 +13,8 @@ import {
   add,
   clamp,
   scale,
-  extrapolate
+  extrapolate,
+  isFiniteVector
 } from './math'
 import { installMouseHelper } from './mouse-helper'
 
@@ -21,6 +22,9 @@ import { installMouseHelper } from './mouse-helper'
 export { installMouseHelper }
 
 const log = debug('ghost-cursor')
+
+const MAX_PATH_STEPS = 10000
+const MAX_SCROLL_STEPS = 5000
 
 export interface BoxOptions {
   /**
@@ -273,7 +277,7 @@ export const getElementBox = async (
 }
 
 /** Generates a set of points for mouse movement between two coordinates. */
-export function path(
+export function path (
   start: Vector,
   end: Vector | BoundingBox,
   /**
@@ -296,7 +300,7 @@ export function path(
     ? (25 / optionsResolved.moveSpeed)
     : secureMathRandom()
   const baseTime = speed * MIN_STEPS
-  const steps = Math.ceil((Math.log2(fitts(length, width) + 1) + baseTime) * 3)
+  const steps = Math.min(MAX_PATH_STEPS, Math.ceil((Math.log2(fitts(length, width) + 1) + baseTime) * 3))
   const re = curve.getLUT(steps)
   return clampPositive(re, optionsResolved)
 }
@@ -311,20 +315,7 @@ const clampPositive = (vectors: Vector[], options?: PathOptions): Vector[] | Tim
 }
 
 const generateTimestamps = (vectors: Vector[], options?: PathOptions): TimedVector[] => {
-  const speed = options?.moveSpeed ?? (secureMathRandom() * 0.5 + 0.5)
-  const timeToMove = (P0: Vector, P1: Vector, P2: Vector, P3: Vector): number => {
-    let total = 0
-    const SAMPLES = 10
-    const dt = 1 / SAMPLES
-
-    for (let t = 0; t < 1; t += dt) {
-      const v1 = bezierCurveSpeed(t, P0, P1, P2, P3)
-      const v2 = bezierCurveSpeed(Math.min(t + dt, 1), P0, P1, P2, P3)
-      total += (v1 + v2) * dt / 2
-    }
-
-    return Math.round(total / speed)
-  }
+  const speed = Math.max(0.001, options?.moveSpeed ?? (secureMathRandom() * 0.5 + 0.5))
 
   const timedVectors: TimedVector[] = []
 
@@ -334,9 +325,9 @@ const generateTimestamps = (vectors: Vector[], options?: PathOptions): TimedVect
     } else {
       const P0 = vectors[i - 1]
       const P1 = vectors[i]
-      const P2 = i + 1 < vectors.length ? vectors[i + 1] : extrapolate(P0, P1)
-      const P3 = i + 2 < vectors.length ? vectors[i + 2] : extrapolate(P1, P2)
-      const time = timeToMove(P0, P1, P2, P3)
+      // Use distance between path points instead of integrating the whole curve for each segment
+      const distance = magnitude(direction(P0, P1))
+      const time = Math.round(distance / speed)
 
       timedVectors.push({
         ...vectors[i],
@@ -375,7 +366,7 @@ export class GhostCursor {
   private static readonly OVERSHOOT_SPREAD = 10
   private static readonly OVERSHOOT_RADIUS = 120
 
-  constructor(
+  constructor (
     page: Page,
     {
       start = origin,
@@ -383,29 +374,29 @@ export class GhostCursor {
       defaultOptions = {},
       visible = false
     }:
-      {
-        /**
+    {
+      /**
                * Cursor start position.
                * @default { x: 0, y: 0 }
                */
-        start?: Vector
-        /**
+      start?: Vector
+      /**
                * Initially perform random movements.
                * If `move`,`click`, etc. is performed, these random movements end.
                * @default false
                */
-        performRandomMoves?: boolean
-        /**
+      performRandomMoves?: boolean
+      /**
                * Set custom default options for cursor action functions.
                * Default values are described in the type JSdocs.
                */
-        defaultOptions?: DefaultOptions
-        /**
+      defaultOptions?: DefaultOptions
+      /**
                * Whether cursor should be made visible using `installMouseHelper`.
                * @default false
                */
-        visible?: boolean
-      } = {}
+      visible?: boolean
+    } = {}
   ) {
     this.page = page
     this.location = start
@@ -431,7 +422,7 @@ export class GhostCursor {
   /**
    * Install mouse helper (visible cursor).
    */
-  public async installMouseHelper(): Promise<void> {
+  public async installMouseHelper (): Promise<void> {
     await installMouseHelper(this.page).then(
       ({ removeMouseHelper }) => {
         this.removeMouseHelperFn = removeMouseHelper
@@ -442,13 +433,13 @@ export class GhostCursor {
    * Make the cursor no longer visible.
    * Only has an effect if `visible=true` was passed, or this.installMouseHelper performed manually.
    */
-  public async removeMouseHelper(): Promise<void> {
+  public async removeMouseHelper (): Promise<void> {
     await this.removeMouseHelperFn?.()
     this.removeMouseHelperFn = undefined
   }
 
   /** Move the mouse to a point, getting the vectors via `path(previous, newLocation, options)`  */
-  private async moveMouse(
+  private async moveMouse (
     newLocation: BoundingBox | Vector,
     options?: PathOptions,
     abortOnMove: boolean = false
@@ -460,6 +451,11 @@ export class GhostCursor {
         // In case this is called from random mouse movements and the users wants to move the mouse, abort
         if (abortOnMove && this.moving) {
           return
+        }
+
+        if (!isFiniteVector(v)) {
+          log('Warning: non-finite coordinates, skipping point', v)
+          continue
         }
 
         const steps = 'timestamp' in v ? undefined : 1
@@ -476,7 +472,7 @@ export class GhostCursor {
   }
 
   /** Start random mouse movements. Function recursively calls itself. */
-  private async randomMove(options?: RandomMoveOptions): Promise<void> {
+  private async randomMove (options?: RandomMoveOptions): Promise<void> {
     const optionsResolved = {
       moveDelay: 2000,
       randomizeMoveDelay: true,
@@ -499,7 +495,7 @@ export class GhostCursor {
     }
   }
 
-  private async mouseButtonAction(
+  private async mouseButtonAction (
     action: 'down' | 'up',
     options?: MouseButtonOptions
   ): Promise<void> {
@@ -518,22 +514,22 @@ export class GhostCursor {
   }
 
   /** Mouse button down */
-  public async mouseDown(options?: MouseButtonOptions): Promise<void> {
+  public async mouseDown (options?: MouseButtonOptions): Promise<void> {
     await this.mouseButtonAction('down', options)
   }
 
   /** Mouse button up (release) */
-  public async mouseUp(options?: MouseButtonOptions): Promise<void> {
+  public async mouseUp (options?: MouseButtonOptions): Promise<void> {
     await this.mouseButtonAction('up', options)
   }
 
   /** Toggles random mouse movements on or off. */
-  public toggleRandomMove(random: boolean): void {
+  public toggleRandomMove (random: boolean): void {
     this.moving = !random
   }
 
   /** Get current location of the cursor. */
-  public getLocation(): Vector {
+  public getLocation (): Vector {
     return this.location
   }
 
@@ -541,7 +537,7 @@ export class GhostCursor {
    * Simulates a mouse click at the specified selector or element.
    * Default is to click at current location, don't move.
    */
-  public async click(
+  public async click (
     selector?: string | Locator,
     /** @default defaultOptions.click */
     options?: ClickOptions
@@ -584,7 +580,7 @@ export class GhostCursor {
   }
 
   /** Moves the mouse to the specified selector or element. */
-  public async move(
+  public async move (
     selector: string | Locator,
     /** @default defaultOptions.move */
     options?: MoveOptions
@@ -650,7 +646,7 @@ export class GhostCursor {
   }
 
   /** Moves the mouse to the specified destination point. */
-  public async moveTo(
+  public async moveTo (
     destination: Vector,
     /** @default defaultOptions.moveTo */
     options?: MoveToOptions
@@ -671,12 +667,12 @@ export class GhostCursor {
   }
 
   /** Moves the mouse by a specified amount */
-  public async moveBy(delta: Partial<Vector>, options?: MoveToOptions): Promise<void> {
+  public async moveBy (delta: Partial<Vector>, options?: MoveToOptions): Promise<void> {
     await this.moveTo(add(this.location, { x: 0, y: 0, ...delta }), options)
   }
 
   /** Scrolls the element into view. If already in view, no scroll occurs. */
-  public async scrollIntoView(
+  public async scrollIntoView (
     selector: string | Locator,
     /** @default defaultOptions.scroll */
     options?: ScrollIntoViewOptions
@@ -702,10 +698,24 @@ export class GhostCursor {
       scrollPositionLeft
     } = await this.page.evaluate(() => (
       {
-        viewportWidth: document.body.clientWidth,
-        viewportHeight: document.body.clientHeight,
-        docHeight: document.body.scrollHeight,
-        docWidth: document.body.scrollWidth,
+        viewportWidth: window.innerWidth || document.documentElement.clientWidth || document.body?.clientWidth || 0,
+        viewportHeight: window.innerHeight || document.documentElement.clientHeight || document.body?.clientHeight || 0,
+        docHeight: Math.max(
+          document.body?.scrollHeight || 0,
+          document.documentElement.scrollHeight || 0,
+          document.body?.offsetHeight || 0,
+          document.documentElement.offsetHeight || 0,
+          document.body?.clientHeight || 0,
+          document.documentElement.clientHeight || 0
+        ),
+        docWidth: Math.max(
+          document.body?.scrollWidth || 0,
+          document.documentElement.scrollWidth || 0,
+          document.body?.offsetWidth || 0,
+          document.documentElement.offsetWidth || 0,
+          document.body?.clientWidth || 0,
+          document.documentElement.clientWidth || 0
+        ),
         scrollPositionTop: window.scrollY,
         scrollPositionLeft: window.scrollX
       }
@@ -775,14 +785,19 @@ export class GhostCursor {
     }
 
     try {
-      if (scrollSpeed === 100 && optionsResolved.inViewportMargin <= 0) {
+      const box = await elem.boundingBox()
+      if (box !== null && scrollSpeed === 100 && optionsResolved.inViewportMargin <= 0) {
         await elem.scrollIntoViewIfNeeded()
       } else {
         await manuallyScroll()
       }
-    } catch (e) {
+    } catch (e: any) {
       // use regular JS scroll method as a fallback
-      log('Falling back to JS scroll method', e)
+      if (e.message?.includes('Node does not have a layout object')) {
+        log('Node does not have a layout object, falling back to JS scroll method')
+      } else {
+        log('Falling back to JS scroll method', e)
+      }
       await elem.evaluate((e: Element | SVGElement) => e.scrollIntoView({
         block: 'center',
         behavior: scrollSpeed < 90 ? 'smooth' : undefined
@@ -791,7 +806,7 @@ export class GhostCursor {
   }
 
   /** Scrolls the page the distance set by `delta`. */
-  public async scroll(
+  public async scroll (
     delta: Partial<Vector>,
     /** @default defaultOptions.scroll */
     options?: ScrollOptions
@@ -823,10 +838,10 @@ export class GhostCursor {
       ? scrollSpeed
       : scale(scrollSpeed, [EXP_SCALE_START, 100], [EXP_SCALE_START, largerDistance])
 
-    const numSteps = Math.floor(largerDistance / largerDistanceScrollStep)
-    const largerDistanceRemainder = largerDistance % largerDistanceScrollStep
-    const shorterDistanceScrollStep = Math.floor(shorterDistance / numSteps)
-    const shorterDistanceRemainder = shorterDistance % numSteps
+    const numSteps = Math.min(MAX_SCROLL_STEPS, Math.floor(largerDistance / largerDistanceScrollStep))
+    const largerDistanceRemainder = largerDistance % (largerDistanceScrollStep || 1)
+    const shorterDistanceScrollStep = numSteps > 0 ? Math.floor(shorterDistance / numSteps) : 0
+    const shorterDistanceRemainder = numSteps > 0 ? shorterDistance % numSteps : 0
 
     for (let i = 0; i < numSteps; i++) {
       let longerDistanceDelta = largerDistanceScrollStep
@@ -841,14 +856,16 @@ export class GhostCursor {
       deltaX = deltaX * xDirection
       deltaY = deltaY * yDirection
 
-      await this.page.mouse.wheel(deltaX, deltaY)
+      if (Number.isFinite(deltaX) && Number.isFinite(deltaY)) {
+        await this.page.mouse.wheel(deltaX, deltaY)
+      }
     }
 
     await delay(optionsResolved.scrollDelay)
   }
 
   /** Scrolls to the specified destination point. */
-  public async scrollTo(
+  public async scrollTo (
     destination: ScrollToDestination,
     /** @default defaultOptions.scroll */
     options?: ScrollOptions
@@ -896,7 +913,7 @@ export class GhostCursor {
   }
 
   /** Gets the element via a selector. Can use an XPath. */
-  public async getElement(
+  public async getElement (
     selector: string | Locator,
     /** @default defaultOptions.getElement */
     options?: GetElementOptions

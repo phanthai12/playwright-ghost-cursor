@@ -19,7 +19,7 @@ Promise<{ removeMouseHelper: () => Promise<void> }> {
       styleElement.innerHTML = `
         p-mouse-pointer {
           pointer-events: none;
-          position: absolute;
+          position: fixed;
           top: 0;
           z-index: 10000;
           left: 0;
@@ -61,8 +61,8 @@ Promise<{ removeMouseHelper: () => Promise<void> }> {
       document.body.appendChild(box)
 
       const onMouseMove = (event: MouseEvent): void => {
-        box.style.left = `${event.pageX}px`
-        box.style.top = `${event.pageY}px`
+        box.style.left = `${event.clientX}px`
+        box.style.top = `${event.clientY}px`
         box.classList.remove('p-mouse-pointer-hide')
         updateButtons(event.buttons)
       }
