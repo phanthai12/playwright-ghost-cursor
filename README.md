@@ -106,129 +106,210 @@ const run = async (url) => {
 
 ## Methods
 
-#### `new GhostCursor(page: Page, { start?: Vector, performRandomMoves?: boolean, defaultOptions?: DefaultOptions, visible?: boolean = false }): GhostCursor`
+### `GhostCursor` - Creates the ghost cursor
 
 Creates the ghost cursor that contains the action functions described below.
 
-- **page:** Playwright `page`.
-- **start (optional):** Cursor start position. Default is `{ x: 0, y: 0 }`.
-- **performRandomMoves (optional):** Initially perform random movements. Default is `false`.
-- **defaultOptions (optional):** Set custom default options for `click`, `move`, `moveTo`, and `randomMove` functions. Default values are described below.
-- **visible (optional):** Make the cursor visible, using `installMouseHelper()`. Default is `false`.
+```ts
+/**
+ * @param page Playwright `page`.
+ * @param start (optional) Cursor start position. Default is `{ x: 0, y: 0 }`.
+ * @param performRandomMoves (optional) Initially perform random movements. Default is `false`.
+ * @param defaultOptions (optional) Set custom default options for `click`, `move`, `moveTo`, and `randomMove` functions.
+ * @param visible (optional) Make the cursor visible, using `installMouseHelper()`. Default is `false`.
+ */
+new GhostCursor(page: Page, { start?: Vector, performRandomMoves?: boolean, defaultOptions?: DefaultOptions, visible?: boolean = false }): GhostCursor
+```
 
-#### `toggleRandomMove(random: boolean): void`
+### `toggleRandomMove` - Toggles random mouse movements
 
 Toggles random mouse movements on or off.
 
-#### `click(selector?: string | Locator, options?: ClickOptions): Promise<void>`
+```ts
+/**
+ * @param random boolean to toggle random movements on or off.
+ */
+toggleRandomMove(random: boolean): void
+```
+
+### `click` - Simulates a mouse click
 
 Simulates a mouse click at the specified selector or element.
 
-- **selector (optional):** CSS selector or Locator to identify the target element.
-- **options (optional):** Additional options for clicking. **Extends the `options` of the `move`, `scrollIntoView`, and `getElement` functions (below)**
-    - `hesitate (number):` Delay before initiating the click action in milliseconds. Default is `0`.
-    - `waitForClick (number):` Delay between mousedown and mouseup in milliseconds. Default is `0`.
-    - `moveDelay (number):` Delay after moving the mouse in milliseconds. Default is `2000`. If `randomizeMoveDelay=true`, delay is randomized from 0 to `moveDelay`.
-    - `button (MouseButton):` Mouse button to click. Default is `left`.
-    - `clickCount (number):` Number of times to click the button. Default is `1`.
+```ts
+/**
+ * @param selector (optional) CSS selector or Locator to identify the target element.
+ * @param options (optional) Additional options for clicking. Extends the `options` of the `move`, `scrollIntoView`, and `getElement` functions.
+ *  - hesitate (number): Delay before initiating the click action in milliseconds. Default is 0.
+ *  - waitForClick (number): Delay between mousedown and mouseup in milliseconds. Default is 0.
+ *  - moveDelay (number): Delay after moving the mouse in milliseconds. Default is 2000. If randomizeMoveDelay=true, delay is randomized from 0 to moveDelay.
+ *  - button (MouseButton): Mouse button to click. Default is left.
+ *  - clickCount (number): Number of times to click the button. Default is 1.
+ */
+click(selector?: string | Locator, options?: ClickOptions): Promise<void>
+```
 
-#### `move(selector: string | Locator, options?: MoveOptions): Promise<void>`
+### `move` - Moves the mouse
 
 Moves the mouse to the specified selector or element.
 
-- **selector:** CSS selector or Locator to identify the target element.
-- **options (optional):** Additional options for moving. **Extends the `options` of the `scrollIntoView` and `getElement` functions (below)**
-    - `paddingPercentage (number):` Percentage of padding to be added inside the element when determining the target point. Default is `0` (may move to anywhere within the element). `100` will always move to center of element.
-    - `destination (Vector):` Destination to move the cursor to, relative to the top-left corner of the element. If specified, `paddingPercentage` is not used. If not specified (default), destination is random point within the `paddingPercentage`.
-    - `moveDelay (number):` Delay after moving the mouse in milliseconds. Default is `0`. If `randomizeMoveDelay=true`, delay is randomized from 0 to `moveDelay`.
-    - `randomizeMoveDelay (boolean):` Randomize delay between actions from `0` to `moveDelay`. Default is `true`.
-    - `maxTries (number):` Maximum number of attempts to mouse-over the element. Default is `10`.
-    - `moveSpeed (number):` Speed of mouse movement. Default is random.
-    - `overshootThreshold (number):` Distance from current location to destination that triggers overshoot to occur. (Below this distance, no overshoot will occur). Default is `500`.
+```ts
+/**
+ * @param selector CSS selector or Locator to identify the target element.
+ * @param options (optional) Additional options for moving. Extends the `options` of the `scrollIntoView` and `getElement` functions.
+ *  - paddingPercentage (number): Percentage of padding to be added inside the element when determining target point. Default is 0. 100 will always move to center of element.
+ *  - destination (Vector): Destination to move the cursor to, relative to the top-left corner of the element. If specified, paddingPercentage is not used. If not specified (default), destination is random point within the paddingPercentage.
+ *  - moveDelay (number): Delay after moving the mouse in milliseconds. Default is 0.
+ *  - randomizeMoveDelay (boolean): Randomize delay between actions from 0 to moveDelay. Default is true.
+ *  - maxTries (number): Maximum number of attempts to mouse-over the element. Default is 10.
+ *  - moveSpeed (number): Speed of mouse movement. Default is random.
+ *  - overshootThreshold (number): Distance from current location to destination that triggers overshoot to occur. Default is 500.
+ */
+move(selector: string | Locator, options?: MoveOptions): Promise<void>
+```
 
-#### `moveTo(destination: Vector, options?: MoveToOptions): Promise<void>`
+### `moveTo` - Moves the mouse to a destination
 
 Moves the mouse to the specified destination point.
 
-- **destination:** An object with `x` and `y` coordinates representing the target position. For example, `{ x: 500, y: 300 }`.
-- **options (optional):** Additional options for moving.
-    - `moveSpeed (number):` Speed of mouse movement. Default is random.
-    - `moveDelay (number):` Delay after moving the mouse in milliseconds. Default is `0`. If `randomizeMoveDelay=true`, delay is randomized from 0 to `moveDelay`.
-    - `randomizeMoveDelay (boolean):` Randomize delay between actions from `0` to `moveDelay`. Default is `true`.
+```ts
+/**
+ * @param destination An object with `x` and `y` coordinates representing the target position. For example, `{ x: 500, y: 300 }`.
+ * @param options (optional) Additional options for moving.
+ *  - moveSpeed (number): Speed of mouse movement. Default is random.
+ *  - moveDelay (number): Delay after moving the mouse in milliseconds. Default is 0.
+ *  - randomizeMoveDelay (boolean): Randomize delay between actions from 0 to moveDelay. Default is true.
+ */
+moveTo(destination: Vector, options?: MoveToOptions): Promise<void>
+```
 
-#### `moveBy(delta: Vector, options?: MoveToOptions): Promise<void>`
+### `moveBy` - Moves the mouse by a specified amount
 
 Moves the mouse by a specified amount.
 
-- **delta:** An object with `x` and `y` coordinates representing the distance to move. For example, `{ x: 10, y: 20 }`.
-- **options (optional):** Additional options for moving. Same as `moveTo` options
+```ts
+/**
+ * @param delta An object with `x` and `y` coordinates representing the distance to move. For example, `{ x: 10, y: 20 }`.
+ * @param options (optional) Additional options for moving. Same as `moveTo` options.
+ */
+moveBy(delta: Partial<Vector>, options?: MoveToOptions): Promise<void>
+```
 
-#### `scrollIntoView(selector: string | Locator, options?: ScrollIntoViewOptions) => Promise<void>`
+### `scrollIntoView` - Scrolls the element into view
 
 Scrolls the element into view. If already in view, no scroll occurs.
 
-- **selector:** CSS selector or Locator to identify the target element.
-- **options (optional):** Additional options for scrolling. **Extends the `options` of the `getElement` and `scroll` functions (below)**
-    - `scrollSpeed (number):` Scroll speed (when scrolling occurs). 0 to 100. 100 is instant. Default is `100`.
-    - `scrollDelay (number):` Time to wait after scrolling (when scrolling occurs). Default is `200`.
-    - `inViewportMargin (number):` Margin (in px) to add around the element when ensuring it is in the viewport. Default is `0`.
+```ts
+/**
+ * @param selector CSS selector or Locator to identify the target element.
+ * @param options (optional) Additional options for scrolling. Extends the `options` of the `getElement` and `scroll` functions.
+ *  - scrollSpeed (number): Scroll speed (when scrolling occurs). 0 to 100. 100 is instant. Default is 100.
+ *  - scrollDelay (number): Time to wait after scrolling (when scrolling occurs). Default is 200.
+ *  - inViewportMargin (number): Margin (in px) to add around the element when ensuring it is in the viewport. Default is 0.
+ */
+scrollIntoView(selector: string | Locator, options?: ScrollIntoViewOptions): Promise<void>
+```
 
-#### `scrollTo: (destination: Partial<Vector> | 'top' | 'bottom' | 'left' | 'right', options?: ScrollOptions) => Promise<void>`
+### `scrollTo` - Scrolls to the specified destination point
 
 Scrolls to the specified destination point.
 
-- **destination:** An object with `x` and `y` coordinates representing the target position. For example, `{ x: 500, y: 300 }`. Can also be `"top"` or `"bottom"`.
-- **options (optional):** Additional options for scrolling. **Extends the `options` of the `scroll` function (below)**
+```ts
+/**
+ * @param destination An object with `x` and `y` coordinates representing the target position. Can also be "top", "bottom", "left" or "right".
+ * @param options (optional) Additional options for scrolling. Extends the `options` of the `scroll` function.
+ */
+scrollTo(destination: Partial<Vector> | 'top' | 'bottom' | 'left' | 'right', options?: ScrollOptions): Promise<void>
+```
 
-#### `scroll: (delta: Partial<Vector>, options?: ScrollOptions) => Promise<void>`
+### `scroll` - Scrolls the page by distance
 
 Scrolls the page the distance set by `delta`.
 
-- **delta:** An object with `x` and `y` coordinates representing the distance to scroll from the current position.
-- **options (optional):** Additional options for scrolling.
-    - `scrollSpeed (number):` Scroll speed. 0 to 100. 100 is instant. Default is `100`.
-    - `scrollDelay (number):` Time to wait after scrolling. Default is `200`.
+```ts
+/**
+ * @param delta An object with `x` and `y` coordinates representing the distance to scroll from the current position.
+ * @param options (optional) Additional options for scrolling.
+ *  - scrollSpeed (number): Scroll speed. 0 to 100. 100 is instant. Default is 100.
+ *  - scrollDelay (number): Time to wait after scrolling. Default is 200.
+ */
+scroll(delta: Partial<Vector>, options?: ScrollOptions): Promise<void>
+```
 
-#### `mouseDown / mouseUp: (options?: MouseButtonOptions) => Promise<void>`
+### `mouseDown` / `mouseUp` - Mouse button actions
 
 Mouse button up or down.
 
-- **options (optional):** Additional options for mouse action.
-    - `button (MouseButton):` Mouse button to click. Default is `left`.
-    - `clickCount (number):` Number of times to click the button. Default is `1`.
+```ts
+/**
+ * @param options (optional) Additional options for mouse action.
+ *  - button (MouseButton): Mouse button to click. Default is left.
+ *  - clickCount (number): Number of times to click the button. Default is 1.
+ */
+mouseDown(options?: MouseButtonOptions): Promise<void>
+mouseUp(options?: MouseButtonOptions): Promise<void>
+```
 
-#### `getElement(selector: string | Locator, options?: GetElementOptions) => Promise<Locator>`
+### `getElement` - Gets an element
 
 Gets the element via a selector. Can use an XPath.
 
-- **selector:** CSS selector or Locator to identify the target element.
-- **options (optional):** Additional options.
-    - `waitForSelector (number):` Time to wait for the selector to appear in milliseconds. Default is to not wait for selector.
+```ts
+/**
+ * @param selector CSS selector or Locator to identify the target element.
+ * @param options (optional) Additional options.
+ *  - waitForSelector (number): Time to wait for the selector to appear in milliseconds.
+ */
+getElement(selector: string | Locator, options?: GetElementOptions): Promise<Locator>
+```
 
-#### `getLocation(): Vector`
+### `getLocation` - Get cursor location
 
 Get current location of the cursor.
 
+```ts
+getLocation(): Vector
+```
+
 ### Other Utility Methods
 
-#### `installMouseHelper(page: Page): Promise<void>`
+### `installMouseHelper` - Installs a visible mouse helper
 
 Installs a mouse helper on the page, making the pointer visible. Gets executed in the `GhostCursor` initialization when passing `visible=true`. Use for debugging only.
 
-#### `getRandomPagePoint(page: Page): Promise<Vector>`
+```ts
+/**
+ * @param page Playwright `page` where the mouse helper should be installed.
+ */
+installMouseHelper(page: Page): Promise<void>
+```
+
+### `getRandomPagePoint` - Gets a random point on the page
 
 Gets a random point on the browser window.
 
-#### `path(start: Vector, end: Vector | BoundingBox, options?: PathOptions): Vector[] | TimedVector[]`
+```ts
+/**
+ * @param page Playwright `page`.
+ */
+getRandomPagePoint(page: Page): Promise<Vector>
+```
+
+### `path` - Generates a mouse movement path
 
 Generates a set of points for mouse movement between two coordinates.
 
-- **start:** Starting point of the movement.
-- **end:** Ending point (or bounding box) of the movement.
-- **options (optional):** Additional options for generating the path.
-    - `spreadOverride (number):` Override the spread of the generated path.
-    - `moveSpeed (number):` Speed of mouse movement. Default is random.
-    - `useTimestamps (boolean):` Generate timestamps for each point based on the trapezoidal rule.
+```ts
+/**
+ * @param start Starting point of the movement.
+ * @param end Ending point (or bounding box) of the movement.
+ * @param options (optional) Additional options for generating the path.
+ *  - spreadOverride (number): Override the spread of the generated path.
+ *  - moveSpeed (number): Speed of mouse movement. Default is random.
+ *  - useTimestamps (boolean): Generate timestamps for each point based on the trapezoidal rule.
+ */
+path(start: Vector, end: Vector | BoundingBox, options?: PathOptions): Vector[] | TimedVector[]
+```
 
 ## How does it work
 
