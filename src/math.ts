@@ -1,5 +1,31 @@
 import { Bezier } from 'bezier-js'
 
+/**
+ * Returns a cryptographically secure random number between 0 (inclusive) and 1 (exclusive).
+ * This is a drop-in replacement for Math.random().
+ */
+export const secureMathRandom = (): number => {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues !== undefined) {
+    const array = new Uint32Array(1)
+    crypto.getRandomValues(array)
+    return array[0] / 0x100000000
+  }
+  if (typeof globalThis !== 'undefined' && globalThis.crypto !== undefined && globalThis.crypto.getRandomValues !== undefined) {
+    const array = new Uint32Array(1)
+    globalThis.crypto.getRandomValues(array)
+    return array[0] / 0x100000000
+  }
+  try {
+    const nodeCrypto = require('crypto')
+    if (nodeCrypto?.randomBytes !== undefined) {
+      return nodeCrypto.randomBytes(4).readUInt32BE(0) / 0x100000000
+    }
+  } catch (e) {
+    // ignore
+  }
+  return Math.random()
+}
+
 export interface Vector {
   x: number
   y: number
@@ -28,11 +54,11 @@ export const setMagnitude = (a: Vector, amount: number): Vector =>
   mult(unit(a), amount)
 
 export const randomNumberRange = (min: number, max: number): number =>
-  Math.random() * (max - min) + min
+  secureMathRandom() * (max - min) + min
 
 export const randomVectorOnLine = (a: Vector, b: Vector): Vector => {
   const vec = direction(a, b)
-  const multiplier = Math.random()
+  const multiplier = secureMathRandom()
   return add(a, mult(vec, multiplier))
 }
 
@@ -51,7 +77,7 @@ export const generateBezierAnchors = (
   b: Vector,
   spread: number
 ): [Vector, Vector] => {
-  const side = Math.round(Math.random()) === 1 ? 1 : -1
+  const side = secureMathRandom() >= 0.5 ? 1 : -1
   const calc = (): Vector => {
     const [randMid, normalV] = randomNormalLine(a, b, spread)
     const choice = mult(normalV, side)
@@ -64,8 +90,8 @@ export const clamp = (target: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, target))
 
 export const overshoot = (coordinate: Vector, radius: number): Vector => {
-  const a = Math.random() * 2 * Math.PI
-  const rad = radius * Math.sqrt(Math.random())
+  const a = secureMathRandom() * 2 * Math.PI
+  const rad = radius * Math.sqrt(secureMathRandom())
   const vector = { x: rad * Math.cos(a), y: rad * Math.sin(a) }
   return add(coordinate, vector)
 }
