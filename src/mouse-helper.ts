@@ -12,7 +12,7 @@ interface WindowWithMouseHelper extends Window {
  */
 export async function installMouseHelper (page: Page):
 Promise<{ removeMouseHelper: () => Promise<void> }> {
-  const initScript = async (): Promise<void> => {
+  const initScript = (): void => {
     const attachListener = (): void => {
       const box = document.createElement('p-mouse-pointer')
       const styleElement = document.createElement('style')
