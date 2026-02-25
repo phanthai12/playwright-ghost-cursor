@@ -9,16 +9,23 @@ like the definitely-not-robot you are.
 
 ## Installation
 
-Since this is a fork adapted for Playwright and not published to npm, you can install it directly from this GitHub repository.
+This fork is published to GitHub Packages. First, ensure you have a `.npmrc` file configuring GitHub Packages for this scope:
+
+```
+@phanthai12:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+```
+
+Then, you can install it via yarn:
 
 ```sh
-yarn add https://github.com/phanthai12/playwright-ghost-cursor
+yarn add @phanthai12/playwright-ghost-cursor
 ```
 
 or with npm:
 
 ```sh
-npm install https://github.com/phanthai12/playwright-ghost-cursor
+npm install @phanthai12/playwright-ghost-cursor
 ```
 
 ## Usage
@@ -26,7 +33,7 @@ npm install https://github.com/phanthai12/playwright-ghost-cursor
 Generating movement data between 2 coordinates.
 
 ```js
-import { path } from "playwright-ghost-cursor";
+import { path } from "@phanthai12/playwright-ghost-cursor";
 
 const from = { x: 100, y: 100 };
 const to = { x: 600, y: 700 };
@@ -48,7 +55,7 @@ const route = path(from, to);
 Generating movement data between 2 coordinates with timestamps.
 
 ```js
-import { path } from "playwright-ghost-cursor";
+import { path } from "@phanthai12/playwright-ghost-cursor";
 
 const from = { x: 100, y: 100 };
 const to = { x: 600, y: 700 };
@@ -70,7 +77,7 @@ const route = path(from, to, { useTimestamps: true });
 Usage with playwright:
 
 ```js
-import { GhostCursor } from "playwright-ghost-cursor";
+import { GhostCursor } from "@phanthai12/playwright-ghost-cursor";
 import { chromium } from "playwright";
 
 const run = async (url) => {
@@ -333,7 +340,7 @@ between the mouse and the object.
 
 ## To turn on logging, please set your DEBUG env variable like so:
 
-- OSX: `DEBUG="playwright-ghost-cursor:*"`
-- Linux: `DEBUG="playwright-ghost-cursor:*"`
-- Windows CMD: `set DEBUG=playwright-ghost-cursor:*`
-- Windows PowerShell: `$env:DEBUG = "playwright-ghost-cursor:*"`
+- OSX: `DEBUG="ghost-cursor:*"`
+- Linux: `DEBUG="ghost-cursor:*"`
+- Windows CMD: `set DEBUG=ghost-cursor:*`
+- Windows PowerShell: `$env:DEBUG = "ghost-cursor:*"`
