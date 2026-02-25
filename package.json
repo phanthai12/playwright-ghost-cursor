@@ -1,8 +1,14 @@
 {
-  "name": "playwright-ghost-cursor",
-  "version": "1.4.2",
+  "name": "@phanthai12/playwright-ghost-cursor",
+  "version": "1.4.3",
   "description": "Move your mouse like a human in Playwright or generate realistic movements on any 2D plane",
-  "repository": "https://github.com/Xetera/ghost-cursor",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phanthai12/playwright-ghost-cursor.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "main": "lib/spoof.js",
   "types": "lib/spoof.d.ts",
   "scripts": {

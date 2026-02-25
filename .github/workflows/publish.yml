@@ -1,25 +1,30 @@
-name: Publish to NPM
+name: Publish to GitHub Packages
 on:
-  workflow_dispatch:
-  push:
-    tags:
-      - 'v*' # only run if new tag is pushed
+    workflow_dispatch:
+    push:
+        tags:
+            - "v*" # only run if new tag is pushed
 
 permissions:
-  id-token: write  # Required for OIDC
-  contents: read
+    packages: write
+    contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          registry-url: 'https://registry.npmjs.org'
-      - name: Install dependencies and build
-        run: yarn
-      - name: Publish to NPM
-        run: npm publish
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  registry-url: "https://npm.pkg.github.com"
+                  scope: "@phanthai12"
+            - name: Install dependencies
+              run: yarn
+            - name: Build
+              run: yarn build
+            - name: Publish to GitHub Packages
+              run: npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
