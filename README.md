@@ -344,3 +344,7 @@ between the mouse and the object.
 - Linux: `DEBUG="ghost-cursor:*"`
 - Windows CMD: `set DEBUG=ghost-cursor:*`
 - Windows PowerShell: `$env:DEBUG = "ghost-cursor:*"`
+
+## Acknowledgements
+
+This project is a fork of [ghost-cursor](https://github.com/Xetera/ghost-cursor) originally created by [Xetera](https://github.com/Xetera). All credit for the foundation and human-like movement algorithms goes to the original author. This fork adapts the library to integrate seamlessly with Playwright.
